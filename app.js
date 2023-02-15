@@ -12,36 +12,41 @@ const {
   getRoomUsers,
 } = require("./utils/users");
 const formatMessage = require("./utils/messages.js");
+const { createRoom, joinRoom } = require("./utils/room.js");
 
 io.on("connection", (socket) => {
-  socket.on("login", (username, room) => {
+  console.log("New client connected: " + socket.id);
+
+  socket.on("login", ({ username, room }) => {
     const user = userJoin(socket.id, username, room);
     // socket.join(user.room);
-    console.log(user);
   });
 
   socket.on("getCurrentUser", () => {
     const user = getCurrentUser(socket.id);
-    console.log(socket.id);
-    console.log(user);
     socket.emit("currentUser", user);
   });
 
+  //Create room
+  socket.on("createRoom", (maxPlayer) => {
+    const user = getCurrentUser(socket.id);
+    const room = createRoom(user, maxPlayer);
+    socket.join(room);
+    socket.emit("roomCreated", room);
+  });
+
+  //Join room
+  socket.on("joinRoom", (roomCode) => {
+    const user = getCurrentUser(socket.id);
+    const room = joinRoom(user, roomCode);
+    socket.join(room);
+    socket.emit("roomJoined", room);
+  });
+
+  //Runs when client disconnects
   socket.on("disconnect", () => {
+    console.log("Client disconnected: " + socket.id);
     const user = userLeave(socket.id);
-
-    if (user) {
-      io.to(user.room).emit(
-        "message",
-        formatMessage("botName", `${user.username} has left the chat`)
-      );
-
-      //Send users and room info
-      io.to(user.room).emit("roomUsers", {
-        room: user.room,
-        users: getRoomUsers(user.room),
-      });
-    }
   });
 });
 const PORT = 3000 || process.env.PORT;
