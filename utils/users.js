@@ -1,8 +1,10 @@
 const users = [];
 
+// state = ['Host', 'Waiting', 'Ready', 'Alive', 'Died']
+
 //Join user
-function userJoin(id, username, room) {
-  const user = { id, username, room };
+function userJoin(id, username, room, state) {
+  const user = { id, username, room, state };
 
   users.push(user);
 
@@ -22,6 +24,11 @@ function getCurrentUser(id) {
   return users.find((user) => user.id === id);
 }
 
+//Get all users
+function getAllUsers() {
+  return users;
+}
+
 //User leaves chat
 function userLeave(id) {
   const index = users.findIndex((user) => user.id === id);
@@ -37,10 +44,22 @@ function getRoomUsers(room) {
   return users.filter((user) => user.room === room);
 }
 
+//Change user state
+function changeUserState(id, newState) {
+  users.forEach(user => {
+    if (user.id === id) {
+      user.state = newState;
+    }
+  });
+  return users;
+}
+
 module.exports = {
   userJoin,
   joinRoom,
   getCurrentUser,
+  getAllUsers,
   userLeave,
   getRoomUsers,
+  changeUserState,
 };
