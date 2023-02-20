@@ -8,17 +8,25 @@ const io = require("socket.io")(server, {
 const {
   userJoin,
   getCurrentUser,
+  getAllUsers,
   userLeave,
   getRoomUsers,
+  changeUserState,
 } = require("./utils/users");
 const formatMessage = require("./utils/messages.js");
-const { createRoom, joinRoom } = require("./utils/room.js");
+const {
+  getRoom,
+  getAllRooms,
+  createRoom,
+  joinRoom,
+  changeRoomState,
+} = require("./utils/room.js");
 
 io.on("connection", (socket) => {
   console.log("New client connected: " + socket.id);
 
   socket.on("login", ({ username, room }) => {
-    const user = userJoin(socket.id, username, room);
+    const user = userJoin(socket.id, username, room, "Waiting");
     // socket.join(user.room);
   });
 
@@ -30,17 +38,49 @@ io.on("connection", (socket) => {
   //Create room
   socket.on("createRoom", (maxPlayer) => {
     const user = getCurrentUser(socket.id);
-    const room = createRoom(user, maxPlayer);
-    socket.join(room);
-    socket.emit("roomCreated", room);
+    const roomCode = createRoom(user, maxPlayer);
+    user.room = roomCode;
+    user.state = "Host";
+    console.log(user);
+    console.log(getAllRooms());
+    socket.emit("roomCreated", roomCode);
   });
 
   //Join room
   socket.on("joinRoom", (roomCode) => {
+    console.log(roomCode);
     const user = getCurrentUser(socket.id);
     const room = joinRoom(user, roomCode);
-    socket.join(room);
+    if (room != false) {
+      user.room = room;
+      console.log(user);
+    }
     socket.emit("roomJoined", room);
+  });
+
+  //Fetch user in room
+  socket.on("getRoomUsers", (roomId) => {
+    const users = getRoomUsers(roomId);
+    socket.emit("roomUsers", users);
+  });
+
+  //Get room
+  socket.on("getRoom", (roomId) => {
+    const room = getRoom(roomId);
+    socket.emit("thisRoom", room);
+  });
+
+  //Change user state
+  socket.on("changeUserState", (id, newState) => {
+    const users = changeUserState(id, newState);
+    socket.emit("updateUserState", users);
+  });
+
+  //Change room state
+  socket.on("changeRoomState", (code) => {
+    const room = changeRoomState(code);
+    room.users = getAllUsers();
+    socket.emit("updateRoomState", room);
   });
 
   //Runs when client disconnects
