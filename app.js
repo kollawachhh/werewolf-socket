@@ -8,26 +8,26 @@ const io = require("socket.io")(server, {
 const {
   userJoin,
   getCurrentUser,
-  getAllUsers,
   userLeave,
-  getRoomUsers,
-  changeUserState,
+  /* getRoomUsers, */
 } = require("./utils/users");
 const formatMessage = require("./utils/messages.js");
 const {
   getRoom,
-  getAllRooms,
   createRoom,
   joinRoom,
   changeRoomState,
+  leaveRoom,
+  getRoomUsers,
+  changeUserState,
 } = require("./utils/room.js");
 
 io.on("connection", (socket) => {
   console.log("New client connected: " + socket.id);
 
   socket.on("login", ({ username, room }) => {
-    const user = userJoin(socket.id, username, room, "Waiting");
-    // socket.join(user.room);
+    userJoin(socket.id, username, room, "Waiting");
+    //
   });
 
   socket.on("getCurrentUser", () => {
@@ -39,21 +39,19 @@ io.on("connection", (socket) => {
   socket.on("createRoom", (maxPlayer) => {
     const user = getCurrentUser(socket.id);
     const roomCode = createRoom(user, maxPlayer);
+    socket.join(roomCode);
     user.room = roomCode;
     user.state = "Host";
-    console.log(user);
-    console.log(getAllRooms());
     socket.emit("roomCreated", roomCode);
   });
 
   //Join room
   socket.on("joinRoom", (roomCode) => {
-    console.log(roomCode);
     const user = getCurrentUser(socket.id);
     const room = joinRoom(user, roomCode);
+    socket.join(room);
     if (room != false) {
       user.room = room;
-      console.log(user);
     }
     socket.emit("roomJoined", room);
   });
@@ -61,7 +59,8 @@ io.on("connection", (socket) => {
   //Fetch user in room
   socket.on("getRoomUsers", (roomId) => {
     const users = getRoomUsers(roomId);
-    socket.emit("roomUsers", users);
+    console.log("room id: ", roomId);
+    io.to(roomId).emit("roomUsers", users);
   });
 
   //Get room
@@ -70,17 +69,25 @@ io.on("connection", (socket) => {
     socket.emit("thisRoom", room);
   });
 
-  //Change user state
-  socket.on("changeUserState", (id, newState) => {
-    const users = changeUserState(id, newState);
-    socket.emit("updateUserState", users);
+  //Change room state
+  socket.on("changeRoomState", (roomId) => {
+    const room = changeRoomState(roomId);
+    io.to(roomId).emit("updateRoomState", room);
   });
 
-  //Change room state
-  socket.on("changeRoomState", (code) => {
-    const room = changeRoomState(code);
-    room.users = getAllUsers();
-    socket.emit("updateRoomState", room);
+  //Change user state
+  socket.on("playerStatus", ({ roomId, status }) => {
+    const room = changeUserState(socket.id, status, roomId);
+    io.to(roomId).emit("roomUsers", room.users);
+  });
+
+  //Leave room
+  socket.on("leaveRoom", (roomId) => {
+    socket.leave(roomId);
+    const users = getRoomUsers(roomId);
+    leaveRoom(socket.id, roomId);
+    console.log("Current members: ", users);
+    io.to(roomId).emit("roomUsers", users);
   });
 
   //Runs when client disconnects
