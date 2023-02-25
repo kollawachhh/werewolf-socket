@@ -20,6 +20,10 @@ function createRoom(user, maxPlayer) {
     users: users,
     roomState: "",
     maxPlayer: 0,
+    stat: {
+      day: 1,
+      period: "Day",
+    },
   };
   room.code = Math.floor(Math.random() * 900000);
   room.host = user;
@@ -70,10 +74,21 @@ function changeUserState(userId, newState, roomCode) {
   return room;
 }
 
-//Change user state
-function changeRoomState(code) {
+//Change room state
+function changeRoomState(code, newState) {
   const room = rooms.find((room) => room.code == code);
+  room.roomState = newState;
+  return room;
+}
+
+//Change user state when start
+function changeUserStateWhenStart(roomCode) {
+  const room = rooms.find((r) => r.code === roomCode);
   room.roomState = "In-game";
+  room.users.forEach((user) => {
+    user.role = "seer";
+    user.state = "Alive";
+  });
   return room;
 }
 
@@ -85,4 +100,5 @@ module.exports = {
   leaveRoom,
   getRoomUsers,
   changeUserState,
+  changeUserStateWhenStart,
 };
