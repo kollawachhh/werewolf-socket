@@ -5,12 +5,7 @@ const io = require("socket.io")(server, {
     methods: ["GET", "POST"],
   },
 });
-const {
-  userJoin,
-  getCurrentUser,
-  userLeave,
-  /* getRoomUsers, */
-} = require("./utils/users");
+const { userJoin, getCurrentUser, userLeave } = require("./utils/users");
 const formatMessage = require("./utils/messages.js");
 const {
   getRoom,
@@ -20,14 +15,14 @@ const {
   leaveRoom,
   getRoomUsers,
   changeUserState,
+  changeUserStateWhenStart,
 } = require("./utils/room.js");
 
 io.on("connection", (socket) => {
   console.log("New client connected: " + socket.id);
 
   socket.on("login", ({ username, room }) => {
-    userJoin(socket.id, username, room, "Waiting");
-    //
+    userJoin(socket.id, username, "", room, "Waiting");
   });
 
   socket.on("getCurrentUser", () => {
@@ -71,7 +66,7 @@ io.on("connection", (socket) => {
 
   //Change room state
   socket.on("changeRoomState", (roomId) => {
-    const room = changeRoomState(roomId);
+    const room = changeRoomState(roomId, "In-game");
     io.to(roomId).emit("updateRoomState", room);
   });
 
@@ -88,6 +83,18 @@ io.on("connection", (socket) => {
     leaveRoom(socket.id, roomId);
     console.log("Current members: ", users);
     io.to(roomId).emit("roomUsers", users);
+  });
+
+  //Listen for chat Message
+  socket.on("chatMessage", ({ msg, roomId }) => {
+    const user = getCurrentUser(socket.id);
+
+    io.to(roomId).emit("message", formatMessage(user.username, msg));
+  });
+
+  socket.on("startGame", (roomId) => {
+    const room = changeUserStateWhenStart(roomId);
+    io.to(roomId).emit("gamePrepared", room);
   });
 
   //Runs when client disconnects
