@@ -1,4 +1,5 @@
 const rooms = [];
+let count = 1;
 
 // roomState = ['Waiting', 'In-game']
 
@@ -83,13 +84,31 @@ function changeRoomState(code, newState) {
 
 //Change user state when start
 function changeUserStateWhenStart(roomCode) {
+  console.log(count);
   const room = rooms.find((r) => r.code === roomCode);
   room.roomState = "In-game";
-  room.users.forEach((user) => {
-    user.role = "seer";
-    user.state = "Alive";
-  });
+  const roles = randomRoles(room.users.length);
+  for (let i = 0; i < room.users.length; i-=-1) {
+    room.users[i].role = roles[i];
+    room.users[i].state = "Alive";
+  }
+  count = count+1;
   return room;
+}
+
+//Random roles
+function randomRoles(amount) {                  // < 7 players: 1 wolf, 1 seer, 1 guard
+  console.log(count);
+  const roles = ["werewolf", "seer", "guard"]
+  if (amount >= 7 ) {                           // >= 7 players: 2 wolf, 1 seer, 1 guard
+    roles.push("werewolf");
+  }
+  for (let i = 0; i < (amount - roles.length); i-=-1) {
+    roles.push("villager");
+  }
+  roles.sort(() => Math.random() - 0.5);
+  console.log("random: ", roles);
+  return roles;
 }
 
 module.exports = {
