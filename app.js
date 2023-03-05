@@ -12,17 +12,25 @@ const {
   createRoom,
   joinRoom,
   changeRoomState,
+  actionUser,
   leaveRoom,
   getRoomUsers,
   changeUserState,
   changeUserStateWhenStart,
+  changeStatPhase,
+  changeDay,
+  changePeriod,
+  userActive,
+  gameOver,
+  moveToLobby,
+  votedResult,
 } = require("./utils/room.js");
 
 io.on("connection", (socket) => {
   console.log("New client connected: " + socket.id);
 
   socket.on("login", ({ username, room }) => {
-    userJoin(socket.id, username, "", room, "Waiting");
+    userJoin(socket.id, username, "", room, "Waiting", false, false, false, 0);
   });
 
   socket.on("getCurrentUser", () => {
@@ -76,6 +84,18 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("roomUsers", room.users);
   });
 
+  //Player action
+  socket.on("playerAction", ({ targetId, roomId, action }) => {
+    userActive(socket.id, roomId);
+    actionUser(targetId, action, roomId);
+    if (action === "saved" || action === "checked") {
+      socket.emit("roomUsers", getRoomUsers(roomId));
+      socket.emit("updateUser");
+    } else {
+      socket.emit("currentUser", getCurrentUser(socket.id));
+    }
+  });
+
   //Leave room
   socket.on("leaveRoom", (roomId) => {
     socket.leave(roomId);
@@ -96,6 +116,53 @@ io.on("connection", (socket) => {
     const room = changeUserStateWhenStart(roomId);
     io.to(roomId).emit("gamePrepared", room);
   });
+
+  socket.on("startTimer", (roomId) => {
+    const room = getRoom(roomId);
+    const user = getCurrentUser(socket.id);
+    if (room.host.username === user.username) {
+      startTimer("meeting", roomId);
+    }
+  });
+
+  function startTimer(phase, roomId) {
+    let time = 10;
+    const room = changeStatPhase(phase, roomId);
+    io.to(roomId).emit("currentPhase", room.stat);
+    const timer = setInterval(() => {
+      time--;
+      io.to(roomId).emit("timer", time);
+      if (time === 0) {
+        clearInterval(timer);
+        if (phase === "meeting" && room.stat.day === "1") {
+          changePeriod(roomId);
+          startTimer("seer", roomId);
+        } else if (phase === "meeting" && room.stat.day !== "1")
+          startTimer("voting", roomId);
+        else if (phase === "voting") {
+          votedResult(roomId);
+          changePeriod(roomId);
+          io.to(roomId).emit("roomUsers", getRoomUsers(roomId));
+          io.to(roomId).emit("updateUser");
+          startTimer("seer", roomId);
+        } else if (phase === "seer") startTimer("guard", roomId);
+        else if (phase === "guard") startTimer("wolf", roomId);
+        else if (phase === "wolf") {
+          if (gameOver(roomId)) {
+            console.log("Game Over");
+            moveToLobby(roomId);
+            io.to(roomId).emit("gameOver", getRoom(roomId));
+            return;
+          }
+          changeDay(roomId);
+          changePeriod(roomId);
+          io.to(roomId).emit("roomUsers", getRoomUsers(roomId));
+          io.to(roomId).emit("updateUser");
+          startTimer("meeting", roomId);
+        }
+      }
+    }, 1000);
+  }
 
   //Runs when client disconnects
   socket.on("disconnect", () => {
