@@ -3,8 +3,29 @@ const users = [];
 // state = ['Host', 'Waiting', 'Ready', 'Alive', 'Died']
 
 //Join user
-function userJoin(id, username, role, room, state) {
-  const user = { id, username, role, room, state };
+function userJoin(
+  id,
+  username,
+  role,
+  room,
+  state,
+  killed,
+  saved,
+  checked,
+  voted_num
+) {
+  const user = {
+    id,
+    username,
+    role,
+    room,
+    state,
+    killed,
+    saved,
+    checked,
+    voted_num,
+    isActive: true,
+  };
 
   users.push(user);
 
