@@ -12,7 +12,10 @@ function userJoin(
   killed,
   saved,
   checked,
-  voted_num
+  voted_num,
+  checked_num,
+  protected_num,
+  voted_werewolf_num
 ) {
   const user = {
     id,
@@ -24,6 +27,9 @@ function userJoin(
     saved,
     checked,
     voted_num,
+    checked_num,
+    protected_num,
+    voted_werewolf_num,
     isActive: true,
   };
 
@@ -41,7 +47,6 @@ function joinRoom(id, room) {
 
 //Get current user
 function getCurrentUser(id) {
-  console.log("users: ", users);
   return users.find((user) => user.id === id);
 }
 
