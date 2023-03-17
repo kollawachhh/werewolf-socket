@@ -25,6 +25,7 @@ function userJoin(
     checked,
     voted_num,
     isActive: true,
+    speaking: false,
   };
 
   users.push(user);
