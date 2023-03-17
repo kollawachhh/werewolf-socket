@@ -5,7 +5,12 @@ const io = require("socket.io")(server, {
     methods: ["GET", "POST"],
   },
 });
-const { userJoin, getCurrentUser, userLeave } = require("./utils/users");
+const {
+  userJoin,
+  getCurrentUser,
+  userLeave,
+  resetUser,
+} = require("./utils/users");
 const formatMessage = require("./utils/messages.js");
 const {
   getRoom,
@@ -74,6 +79,16 @@ io.on("connection", (socket) => {
     socket.emit("roomJoined", room);
   });
 
+  //Leave room
+  socket.on("leaveRoom", (roomId) => {
+    socket.leave(roomId);
+    const users = getRoomUsers(roomId);
+    leaveRoom(socket.id, roomId);
+    resetUser(socket.id);
+    console.log("Current members: ", users);
+    io.to(roomId).emit("roomUsers", users);
+  });
+
   //Fetch user in room
   socket.on("getRoomUsers", (roomId) => {
     const users = getRoomUsers(roomId);
@@ -109,15 +124,6 @@ io.on("connection", (socket) => {
     } else {
       socket.emit("currentUser", getCurrentUser(socket.id));
     }
-  });
-
-  //Leave room
-  socket.on("leaveRoom", (roomId) => {
-    socket.leave(roomId);
-    const users = getRoomUsers(roomId);
-    leaveRoom(socket.id, roomId);
-    console.log("Current members: ", users);
-    io.to(roomId).emit("roomUsers", users);
   });
 
   //Listen for chat Message
@@ -174,6 +180,12 @@ io.on("connection", (socket) => {
     else if (phase === "seer") time = room.setting.seerTime;
     else if (phase === "guard") time = room.setting.guardTime;
     else if (phase === "wolf") time = room.setting.werewolfTime;
+    let isSeerAlive = false;
+    let isGuardAlive = false;
+    room.users.forEach((user) => {
+      if (user.role === "seer" && user.state === "Alive") isSeerAlive = true;
+      if (user.role === "guard" && user.state === "Alive") isGuardAlive = true;
+    });
     io.to(roomId).emit("currentPhase", room.stat);
     const timer = setInterval(() => {
       time--;
@@ -182,7 +194,9 @@ io.on("connection", (socket) => {
         clearInterval(timer);
         if (phase === "meeting" && room.stat.day === "1") {
           changePeriod(roomId);
-          startTimer("seer", roomId);
+          if (isSeerAlive) startTimer("seer", roomId);
+          else if (isGuardAlive) startTimer("guard", roomId);
+          else startTimer("wolf", roomId);
         } else if (phase === "meeting" && room.stat.day !== "1")
           startTimer("voting", roomId);
         else if (phase === "voting") {
@@ -197,9 +211,13 @@ io.on("connection", (socket) => {
             startTimer("end", roomId);
             return;
           }
-          startTimer("seer", roomId);
-        } else if (phase === "seer") startTimer("guard", roomId);
-        else if (phase === "guard") startTimer("wolf", roomId);
+          if (isSeerAlive) startTimer("seer", roomId);
+          else if (isGuardAlive) startTimer("guard", roomId);
+          else startTimer("wolf", roomId);
+        } else if (phase === "seer") {
+          if (isGuardAlive) startTimer("guard", roomId);
+          else startTimer("wolf", roomId);
+        } else if (phase === "guard") startTimer("wolf", roomId);
         else if (phase === "wolf") {
           const killed = votedResult(roomId);
           changeDay(roomId);

@@ -304,13 +304,13 @@ function gameResult(roomId) {
     checked_num: 0,
     guard: null,
     protected_num: 0,
-    voted_werewolf: null,
+    voted_werewolf: [],
     voted_werewolf_num: 0,
     eliminatedSeer: null,
     eliminateGuard: null,
-    eliminatedWerewolf: null,
+    eliminatedWerewolf: [],
     eliminatedWerewolf_num: 0,
-    remainWerewolf: null,
+    remainWerewolf: [],
     remainWerewolf_num: 0,
   };
   let voted_werewolf_num = Math.max(
@@ -335,15 +335,15 @@ function gameResult(roomId) {
       }
     } else if (user.role === "werewolf") {
       if (user.state === "Alive") {
-        result.remainWerewolf = user.username;
+        result.remainWerewolf.push(user.username);
         result.remainWerewolf_num += 1;
       } else {
-        result.eliminatedWerewolf = user.username;
+        result.eliminatedWerewolf.push(user.username);
         result.eliminatedWerewolf_num += 1;
       }
     }
     if (user.voted_werewolf_num === voted_werewolf_num) {
-      result.voted_werewolf = user.username;
+      result.voted_werewolf.push(user.username);
       result.voted_werewolf_num = voted_werewolf_num;
     }
   });
