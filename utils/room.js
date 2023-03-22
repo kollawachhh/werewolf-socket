@@ -71,6 +71,10 @@ function leaveRoom(userId, roomCode) {
       (user) => user.id == userId
     );
     rooms[roomIndex].users.splice(userIndex, 1);
+    if (rooms[roomIndex].users.length == 0) {
+      rooms.splice(roomIndex, 1);
+      return false;
+    }
     return rooms[roomIndex].code;
   } else {
     return false;
