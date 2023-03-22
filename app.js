@@ -26,6 +26,8 @@ const {
   votedResult,
 } = require("./utils/room.js");
 
+const peers = [];
+
 io.on("connection", (socket) => {
   console.log("New client connected: " + socket.id);
 
@@ -164,32 +166,28 @@ io.on("connection", (socket) => {
     }, 1000);
   };
 
-  //Microphone controller
+  // Microphone controller
   socket.on("setup room microphone", (roomId) => {
     const room = getRoom(roomId);
     const otherUsers = [];
     if (room) {
       room.users.forEach(user => {
-        // if (user.id !== socket.id) {
           otherUsers.push(user.id);
-        // }
       });
     }
-    // socket.join(roomId);
     socket.emit('all other users', otherUsers);
+  });
   
+  socket.on('peer connection request', ({ userIdToCall, sdp }) => {
+    io.to(userIdToCall).emit("connection offer", { sdp, callerId: socket.id });
+  });
 
-    socket.on('peer connection request', ({ userIdToCall, sdp }) => {
-      io.to(userIdToCall).emit("connection offer", { sdp, callerId: socket.id });
-    });
+  socket.on('connection answer', ({ userToAnswerTo, sdp }) => {
+    io.to(userToAnswerTo).emit('connection answer', { sdp, answererId: socket.id })
+  });
 
-    socket.on('connection answer', ({ userToAnswerTo, sdp }) => {
-      io.to(userToAnswerTo).emit('connection answer', { sdp, answererId: socket.id })
-    });
-
-    socket.on('ice-candidate', ({ target, candidate }) => {
-      io.to(target).emit('ice-candidate', { candidate, from: socket.id });
-    });
+  socket.on('ice-candidate', ({ target, candidate }) => {
+    io.to(target).emit('ice-candidate', { candidate, from: socket.id });
   });
 
   //Speaking highlight
