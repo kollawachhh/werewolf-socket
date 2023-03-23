@@ -1,7 +1,7 @@
 const server = require("http").createServer();
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:8080",
+    origin: "https://tubular-caramel-b0c6e3.netlify.app/",
     methods: ["GET", "POST"],
   },
 });
