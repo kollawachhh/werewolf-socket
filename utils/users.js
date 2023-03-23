@@ -12,7 +12,10 @@ function userJoin(
   killed,
   saved,
   checked,
-  voted_num
+  voted_num,
+  checked_num,
+  protected_num,
+  voted_werewolf_num
 ) {
   const user = {
     id,
@@ -24,6 +27,9 @@ function userJoin(
     saved,
     checked,
     voted_num,
+    checked_num,
+    protected_num,
+    voted_werewolf_num,
     isActive: true,
   };
 
@@ -41,7 +47,6 @@ function joinRoom(id, room) {
 
 //Get current user
 function getCurrentUser(id) {
-  console.log("users: ", users);
   return users.find((user) => user.id === id);
 }
 
@@ -64,6 +69,22 @@ function getRoomUsers(room) {
   return users.filter((user) => user.room === room);
 }
 
+//reset user
+function resetUser(id) {
+  const user = users.find((user) => user.id === id);
+  user.room = "";
+  user.role = "";
+  user.state = "Waiting";
+  user.killed = false;
+  user.saved = false;
+  user.checked = false;
+  user.voted_num = 0;
+  user.checked_num = 0;
+  user.protected_num = 0;
+  user.voted_werewolf_num = 0;
+  user.isActive = true;
+}
+
 module.exports = {
   userJoin,
   joinRoom,
@@ -71,4 +92,5 @@ module.exports = {
   getAllUsers,
   userLeave,
   getRoomUsers,
+  resetUser,
 };
