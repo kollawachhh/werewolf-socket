@@ -1,7 +1,7 @@
 const server = require("http").createServer();
 const io = require("socket.io")(server, {
   cors: {
-    origin: "https://tubular-caramel-b0c6e3.netlify.app/",
+    origin: "http://localhost:8080",
     methods: ["GET", "POST"],
   },
 });
@@ -31,7 +31,11 @@ const {
   gameResult,
   moveToLobby,
   votedResult,
+  changeUserAccess,
 } = require("./utils/room.js");
+
+const peers = [];
+let timer = 10;
 
 io.on("connection", (socket) => {
   console.log("New client connected: " + socket.id);
@@ -187,7 +191,7 @@ io.on("connection", (socket) => {
       if (user.role === "guard" && user.state === "Alive") isGuardAlive = true;
     });
     io.to(roomId).emit("currentPhase", room.stat);
-    const timer = setInterval(() => {
+    timer = setInterval(() => {
       time--;
       io.to(roomId).emit("timer", time);
       if (time === 0) {
@@ -240,6 +244,48 @@ io.on("connection", (socket) => {
     }, 1000);
   }
 
+  // Microphone controller
+  socket.on("setup room microphone", (roomId) => {
+    const room = getRoom(roomId);
+    const otherUsers = [];
+    if (room) {
+      room.users.forEach((user) => {
+        if (user.isAccessMic == true && user.id != socket.id) {
+          otherUsers.push(user.id);
+        }
+      });
+
+      changeUserAccess(socket.id, true, roomId);
+    }
+    socket.emit("all other users", otherUsers);
+  });
+
+  socket.on("peer connection request", ({ userIdToCall, sdp }) => {
+    io.to(userIdToCall).emit("connection offer", { sdp, callerId: socket.id });
+  });
+
+  socket.on("connection answer", ({ userToAnswerTo, sdp }) => {
+    io.to(userToAnswerTo).emit("connection answer", {
+      sdp,
+      answererId: socket.id,
+    });
+  });
+
+  socket.on("ice-candidate", ({ target, candidate }) => {
+    io.to(target).emit("ice-candidate", { candidate, from: socket.id });
+  });
+
+  //Speaking highlight
+  socket.on("speaking highlight", ({ speaking, roomId }) => {
+    const room = getRoom(roomId);
+    room.users.forEach((user) => {
+      if (user.id === socket.id) {
+        user.speaking = speaking;
+      }
+    });
+    io.to(roomId).emit("show highlight", room.users);
+  });
+
   socket.on("gameResult", (roomId) => {
     const room = getRoom(roomId);
     let time = 20;
@@ -266,7 +312,12 @@ io.on("connection", (socket) => {
 
       if (user.room) {
         leaveRoom(socket.id, user.room);
-        io.to(user.room).emit("roomUsers", getRoomUsers(user.room));
+        let users = getRoomUsers(user.room);
+        if (users) {
+          io.to(user.room).emit("roomUsers", users);
+        } else {
+          clearInterval(timer);
+        }
       }
       return;
     }

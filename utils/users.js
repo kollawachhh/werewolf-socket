@@ -31,6 +31,8 @@ function userJoin(
     protected_num,
     voted_werewolf_num,
     isActive: true,
+    isAccessMic: false,
+    speaking: false,
   };
 
   users.push(user);
