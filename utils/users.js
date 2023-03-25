@@ -25,6 +25,7 @@ function userJoin(
     checked,
     voted_num,
     isActive: true,
+    isAccessMic: false,
     speaking: false,
   };
 

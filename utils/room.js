@@ -264,6 +264,21 @@ function moveToLobby(roomCode) {
   return room;
 }
 
+//Change user access
+function changeUserAccess(userId, newState, roomCode) {
+  const room = rooms.find((r) => r.code === roomCode);
+
+  if (room.host.id == userId) {
+    room.host.isAccessMic = true;
+  }
+
+  room.users.forEach((user) => {
+    if (user.id === userId) {
+      user.isAccessMic = newState;
+    }
+  });
+}
+
 module.exports = {
   getRoom,
   createRoom,
@@ -281,4 +296,5 @@ module.exports = {
   gameOver,
   moveToLobby,
   votedResult,
+  changeUserAccess,
 };

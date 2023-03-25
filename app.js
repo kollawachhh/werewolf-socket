@@ -24,6 +24,7 @@ const {
   gameOver,
   moveToLobby,
   votedResult,
+  changeUserAccess,
 } = require("./utils/room.js");
 
 const peers = [];
@@ -172,8 +173,12 @@ io.on("connection", (socket) => {
     const otherUsers = [];
     if (room) {
       room.users.forEach(user => {
+        if (user.isAccessMic == true && user.id != socket.id) {
           otherUsers.push(user.id);
+        }
       });
+
+      changeUserAccess(socket.id, true, roomId);
     }
     socket.emit('all other users', otherUsers);
   });
