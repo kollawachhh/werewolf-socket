@@ -1,7 +1,14 @@
-const server = require("http").createServer();
+const path = require("path");
+const express = require("express");
+const app = express();
+const server = require("http").createServer(app);
+
+//set static folder
+app.use(express.static(path.join("public")));
+
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:8080",
+    origin: "https://werewolfg.netlify.app",
     methods: ["GET", "POST"],
   },
 });
@@ -324,5 +331,5 @@ io.on("connection", (socket) => {
     console.log("Client disconnected: " + socket.id);
   });
 });
-const PORT = 3000 || process.env.PORT;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
