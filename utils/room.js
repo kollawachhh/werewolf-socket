@@ -9,6 +9,8 @@ function getRoom(roomCode) {
 //Get room users
 function getRoomUsers(roomCode) {
   const room = rooms.find((r) => r.code === roomCode);
+  console.log(room);
+  if (room == undefined) return false;
   return room.users;
 }
 
@@ -55,8 +57,13 @@ function createRoom(user, setting) {
 function joinRoom(user, roomCode) {
   const roomIndex = rooms.findIndex((room) => room.code == roomCode);
   if (roomIndex != -1) {
-    rooms[roomIndex].users.push(user);
-    return rooms[roomIndex].code;
+    if (rooms[roomIndex].users.length != rooms[roomIndex].maxPlayer) {
+      rooms[roomIndex].users.push(user);
+      console.log("Room id: ", rooms[roomIndex].code);
+      return rooms[roomIndex].code;
+    } else {
+      return "full";
+    }
   } else {
     return false;
   }
@@ -123,7 +130,7 @@ function actionUser(targetId, action, roomCode, userId) {
         user.voted_num += 1;
       } else if (action === "killed" && user.saved) {
         room.users.forEach((u) => {
-          if (u.id === userId) {
+          if (u.role === "guard") {
             u.protected_num += 1;
           }
         });
@@ -169,11 +176,13 @@ function changeRoomState(code, newState) {
 //Change user state when start
 function changeUserStateWhenStart(roomCode) {
   const room = rooms.find((r) => r.code === roomCode);
-  room.roomState = "In-game";
-  const roles = randomRoles(room.users.length);
-  for (let i = 0; i < room.users.length; i -= -1) {
-    room.users[i].role = roles[i];
-    room.users[i].state = "Alive";
+  if (room.host.role == "") {
+    room.roomState = "In-game";
+    const roles = randomRoles(room.users.length);
+    for (let i = 0; i < room.users.length; i -= -1) {
+      room.users[i].role = roles[i];
+      room.users[i].state = "Alive";
+    }
   }
   return room;
 }
@@ -195,8 +204,8 @@ function userActive(userId, roomCode) {
 
 //Random roles
 function randomRoles(amount) {
-  // < 7 players: 1 wolf, 1 seer, 1 guard
   const roles = ["werewolf", "seer", "guard"];
+  // < 7 players: 1 wolf, 1 seer, 1 guard
   if (amount >= 7) {
     // >= 7 players: 2 wolf, 1 seer, 1 guard
     roles.push("werewolf");
@@ -384,6 +393,21 @@ function moveToLobby(roomCode) {
   return room;
 }
 
+//Change user access
+function changeUserAccess(userId, newState, roomCode) {
+  const room = rooms.find((r) => r.code === roomCode);
+
+  if (room.host.id == userId) {
+    room.host.isAccessMic = true;
+  }
+
+  room.users.forEach((user) => {
+    if (user.id === userId) {
+      user.isAccessMic = newState;
+    }
+  });
+}
+
 module.exports = {
   getRoom,
   createRoom,
@@ -403,4 +427,5 @@ module.exports = {
   moveToLobby,
   gameResult,
   votedResult,
+  changeUserAccess,
 };
