@@ -8,7 +8,7 @@ app.use(express.static(path.join("public")));
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:8080",
+    origin: "https://werewolfg.netlify.app",
     methods: ["GET", "POST"],
   },
 });
