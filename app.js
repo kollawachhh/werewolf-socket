@@ -8,7 +8,7 @@ app.use(express.static(path.join("public")));
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: "https://werewolfg.netlify.app",
+    origin: "http://localhost:8080",
     methods: ["GET", "POST"],
   },
 });
@@ -83,8 +83,8 @@ io.on("connection", (socket) => {
   socket.on("joinRoom", (roomCode) => {
     const user = getCurrentUser(socket.id);
     const room = joinRoom(user, roomCode);
-    socket.join(room);
-    if (room != false) {
+    if (room != "full" && room != false && room != "In-game") {
+      socket.join(room);
       user.room = room;
     }
     socket.emit("roomJoined", room);
@@ -96,14 +96,22 @@ io.on("connection", (socket) => {
     const users = getRoomUsers(roomId);
     leaveRoom(socket.id, roomId);
     resetUser(socket.id);
-    console.log("Current members: ", users);
     io.to(roomId).emit("roomUsers", users);
+  });
+
+  //Kick player
+  socket.on("kickPlayer", ({ roomId, userId }) => {
+    leaveRoom(userId, roomId);
+    io.to(roomId).emit("roomUsers", getRoomUsers(roomId));
+    io.to(roomId).emit("kicked");
+    if (userId === socket.id) {
+      socket.leave(roomId);
+    }
   });
 
   //Fetch user in room
   socket.on("getRoomUsers", (roomId) => {
     const users = getRoomUsers(roomId);
-    console.log("room id: ", roomId);
     io.to(roomId).emit("roomUsers", users);
   });
 
@@ -213,7 +221,11 @@ io.on("connection", (socket) => {
         else if (phase === "voting") {
           const killed = votedResult(roomId);
           changePeriod(roomId);
-          if (killed) {
+          if (killed != false) {
+            io.to(roomId).emit(
+              "message",
+              formatMessage("Server", killed + " has been killed")
+            );
             io.to(roomId).emit("playerKilled");
           }
           io.to(roomId).emit("roomUsers", getRoomUsers(roomId));
@@ -233,7 +245,11 @@ io.on("connection", (socket) => {
           const killed = votedResult(roomId);
           changeDay(roomId);
           changePeriod(roomId);
-          if (killed) {
+          if (killed != false) {
+            io.to(roomId).emit(
+              "message",
+              formatMessage("Server", killed + " has been killed")
+            );
             io.to(roomId).emit("playerKilled");
           }
           io.to(roomId).emit("roomUsers", getRoomUsers(roomId));
@@ -328,7 +344,6 @@ io.on("connection", (socket) => {
       }
       return;
     }
-    console.log("Client disconnected: " + socket.id);
   });
 });
 const PORT = process.env.PORT || 3000;
