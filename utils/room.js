@@ -9,7 +9,6 @@ function getRoom(roomCode) {
 //Get room users
 function getRoomUsers(roomCode) {
   const room = rooms.find((r) => r.code === roomCode);
-  console.log(room);
   if (room == undefined) return false;
   return room.users;
 }
@@ -49,7 +48,6 @@ function createRoom(user, setting) {
   room.setting.guardTime = setting.guardTime;
   room.setting.werewolfTime = setting.werewolfTime;
   rooms.push(room);
-  console.log("Room id: ", room.code + ", created by: " + room.host.username);
   return room.code;
 }
 
@@ -57,9 +55,11 @@ function createRoom(user, setting) {
 function joinRoom(user, roomCode) {
   const roomIndex = rooms.findIndex((room) => room.code == roomCode);
   if (roomIndex != -1) {
-    if (rooms[roomIndex].users.length != rooms[roomIndex].maxPlayer) {
+    if (rooms[roomIndex].roomState === "In-game") return "In-game";
+    else if (
+      rooms[roomIndex].users.length < rooms[roomIndex].setting.maxPlayer
+    ) {
       rooms[roomIndex].users.push(user);
-      console.log("Room id: ", rooms[roomIndex].code);
       return rooms[roomIndex].code;
     } else {
       return "full";
@@ -72,7 +72,6 @@ function joinRoom(user, roomCode) {
 //User leave room
 function leaveRoom(userId, roomCode) {
   const roomIndex = rooms.findIndex((room) => room.code == roomCode);
-  console.log(roomIndex);
   if (roomIndex != -1) {
     const userIndex = rooms[roomIndex].users.findIndex(
       (user) => user.id == userId
@@ -146,6 +145,7 @@ function votedResult(roomCode) {
   let maxVoted = Math.max(...room.users.map((user) => user.voted_num));
   let maxUserVotedId = "";
   let count = 0;
+  let userHasKilled = null;
   room.users.forEach((u) => {
     if (u.voted_num === maxVoted) {
       count += 1;
@@ -159,11 +159,11 @@ function votedResult(roomCode) {
       if (u.id === maxUserVotedId) {
         u.state = "Eliminated";
         u.killed = true;
-        console.log("user: " + u.username + " is killed");
-        return true;
+        userHasKilled = u.username;
       }
     });
   }
+  return userHasKilled;
 }
 
 //Change room state
@@ -214,7 +214,6 @@ function randomRoles(amount) {
     roles.push("villager");
   }
   roles.sort(() => Math.random() - 0.5);
-  console.log("random: ", roles);
   return roles;
 }
 
@@ -292,20 +291,15 @@ function gameOver(roomCode) {
       villager += 1;
     }
   });
-  console.log("werewolf: " + werewolf);
-  console.log("villager: " + villager);
   if (werewolf >= villager) {
     room.stat.description = "Werewolf Win";
     room.stat.secDescription = "";
-    console.log("Werewolf win");
     return true;
   } else if (werewolf === 0) {
     room.stat.description = "Villager Win";
     room.stat.secDescription = "";
-    console.log("Villger win");
     return true;
   }
-  console.log(false);
   return false;
 }
 
